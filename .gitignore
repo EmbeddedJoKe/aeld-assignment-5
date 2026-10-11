@@ -2,3 +2,5 @@
 build/
 .vscode/
 *.log
+host-tools/
+actions-runner-assignment4/

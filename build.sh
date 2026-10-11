@@ -1,33 +1,21 @@
 #!/bin/bash
-#Script to build buildroot configuration
-#Author: Siddhant Jajoo
+set -euo pipefail
+cd "$(dirname "$0")"
+source ./shared.sh
 
-source shared.sh
+# Override BR2_DL_DIR to share a persistent cache with other checkouts.
+export BR2_DL_DIR="${BR2_DL_DIR:-${HOME}/.dl}"
+mkdir -p "$BR2_DL_DIR"
+git submodule update --init --recursive
 
-EXTERNAL_REL_BUILDROOT=../base_external
-git submodule init
-git submodule sync
-git submodule update
-
-set -e 
-cd `dirname $0`
-
-if [ ! -e buildroot/.config ]
-then
-	echo "MISSING BUILDROOT CONFIGURATION FILE"
-
-	if [ -e ${AESD_MODIFIED_DEFCONFIG} ]
-	then
-		echo "USING ${AESD_MODIFIED_DEFCONFIG}"
-		make -C buildroot defconfig BR2_EXTERNAL=${EXTERNAL_REL_BUILDROOT} BR2_DEFCONFIG=${AESD_MODIFIED_DEFCONFIG_REL_BUILDROOT}
-	else
-		echo "Run ./save_config.sh to save this as the default configuration in ${AESD_MODIFIED_DEFCONFIG}"
-		echo "Then add packages as needed to complete the installation, re-running ./save_config.sh as needed"
-		make -C buildroot defconfig BR2_EXTERNAL=${EXTERNAL_REL_BUILDROOT} BR2_DEFCONFIG=${AESD_DEFAULT_DEFCONFIG}
-	fi
-else
-	echo "USING EXISTING BUILDROOT CONFIG"
-	echo "To force update, delete .config or make changes using make menuconfig and build again."
-	make -C buildroot BR2_EXTERNAL=${EXTERNAL_REL_BUILDROOT}
-
+if [ ! -f buildroot/.config ]; then
+    if [ -f "$AESD_MODIFIED_DEFCONFIG" ]; then
+        make -C buildroot BR2_EXTERNAL=../base_external \
+            BR2_DEFCONFIG="$AESD_MODIFIED_DEFCONFIG_REL_BUILDROOT" defconfig
+    else
+        make -C buildroot BR2_EXTERNAL=../base_external "$AESD_DEFAULT_DEFCONFIG"
+    fi
 fi
+
+# Build on the first invocation, including when defconfig was just generated.
+make -C buildroot BR2_EXTERNAL=../base_external "$@"

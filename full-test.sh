@@ -6,6 +6,8 @@ set -e
 
 cd `dirname $0`
 test_dir=`pwd`
+# The CI container supplies this directory in PATH; also support native Ubuntu.
+export PATH="$test_dir/host-tools/bin:$test_dir/assignment-autotest/test/shared:$PATH"
 echo "starting test with SKIP_BUILD=\"${SKIP_BUILD}\" and DO_VALIDATE=\"${DO_VALIDATE}\""
 
 # This part of the script always runs as the current user, even when
