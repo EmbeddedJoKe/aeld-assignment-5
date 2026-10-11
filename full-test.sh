@@ -29,8 +29,20 @@ if [ -f conf/assignment.txt ]; then
     assignment=`cat conf/assignment.txt`
     if [ -f ./assignment-autotest/test/${assignment}/assignment-test.sh ]; then
         echo "Executing assignment test script"
-        ./assignment-autotest/test/${assignment}/assignment-test.sh $test_dir
-        rc=$?
+        assignment_test="./assignment-autotest/test/${assignment}/assignment-test.sh"
+        # The instructor helper tries to boot QEMU even after a failed build.
+        # Complete its build phase first so failure returns without an SSH loop.
+        if [ "$assignment" = assignment5-buildroot ] && [ "${SKIP_BUILD:-0}" = 0 ]; then
+            DO_VALIDATE=0 "$assignment_test" "$test_dir"
+            rc=$?
+            if [ "$rc" -eq 0 ] && [ "${DO_VALIDATE:-1}" = 1 ]; then
+                SKIP_BUILD=1 DO_VALIDATE=1 "$assignment_test" "$test_dir"
+                rc=$?
+            fi
+        else
+            "$assignment_test" "$test_dir"
+            rc=$?
+        fi
         if [ $rc -eq 0 ]; then
             echo "Test of assignment ${assignment} complete with success"
         else
