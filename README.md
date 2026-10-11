@@ -71,3 +71,9 @@ Inspect it with `systemctl --user status aeld-assignment5-runner.service`.
 The repository needs the `SSH_PRIVATE_KEY` Actions secret for the source fetch.
 The workflow runs the instructor full build and socket test, with queued runs
 that do not cancel active jobs.
+
+`build.sh` rejects overlapping builds in the same checkout. Before building,
+`recover-build-state.sh` checks the host-e2fsprogs extraction/configuration
+stamps against its configure script and Makefile. Inconsistent package state
+is moved to `buildroot/output/recovery/`; Buildroot then regenerates only that
+package using the existing download cache. Other packages are retained.
