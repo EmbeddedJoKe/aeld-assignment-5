@@ -5,9 +5,8 @@
 #
 ##############################################################
 
-# Published Assignment 4 Part 1 commit. The package patch includes Part 2
-# source changes until those changes are reviewed and pushed upstream.
-AESD_ASSIGNMENTS_VERSION = 1f9f28513dac1215d2f14a59fd8fdd0ed95698c0
+# Published Assignment 4 Part 2 source, including PATH and CC handling.
+AESD_ASSIGNMENTS_VERSION = e4f36a0f5e130ee40cbbd0d5e986c41a77720b74
 # Note: Be sure to reference the *ssh* repository URL here (not https) to work properly
 # with ssh keys and the automated build/test system.
 # Your site should start with git@github.com:

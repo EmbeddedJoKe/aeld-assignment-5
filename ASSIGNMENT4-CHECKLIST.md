@@ -11,12 +11,13 @@
 - [x] Boot runqemu.sh and verify SSH at localhost:10022.
 - [x] Run finder-test.sh from multiple directories and verify writer syslog.
 - [x] SCP assignment4-result.txt into source assignments/assignment4.
-- [ ] Execute instructor full-test.sh and source regression tests.
+- [x] Execute instructor full-test.sh and source regression tests.
 - [x] Register separate GitHub Actions runner with approval (kept offline during local builds).
-- [ ] Record final results and review/commit/push/tag commands.
+- [x] Record final local results and review/commit/push/tag commands.
 
-No pushes or final tags are authorized. No existing tags or origin remotes
-will be changed. Generated Buildroot files and downloads stay untracked.
+Source commit e4f36a0 was pushed with explicit approval. Buildroot publication
+and final tags still require approval. Existing tags and origin remotes are
+unchanged. Generated Buildroot files and downloads stay untracked.
 
 ## Review against instructor documents
 
@@ -26,9 +27,9 @@ instructions take precedence over transcript transcription errors.
 
 - Buildroot is exactly release 2024.02.13, recorded in local commit 2d2d943.
 - Source package uses Git SSH and an immutable published source revision.
-  A package patch mirrors the unpublished source changes for local validation;
-  final submission should advance to the updated source commit after an
-  approved push and remove that patch.
+  Initial validation used a patch mirroring unpublished source changes. After
+  approved source publication, the package pins e4f36a0 directly and the patch
+  has been removed.
 - project_base external tree, /usr/bin installs, CC handling, /etc/finder-app/conf,
   result path, Dropbear, root password, and port 10022 match the requirements.
 - build.sh supports both the starter default defconfig and saved custom config.
@@ -41,4 +42,15 @@ instructions take precedence over transcript transcription errors.
   must complete before the new runner starts.
 - sshpass is installed user-locally because sudo requires an interactive
   password. System installation remains an optional host setup command.
-- Existing runner metadata hashes are unchanged. No pushes or tags have run.
+- Existing runner metadata hashes are unchanged. Source publication was explicitly approved; no tags have run.
+
+- [x] Actual clean.sh rebuild and two build.sh invocations passed.
+- [x] Fresh committed checkout built twice and passed QEMU validation.
+- [x] Instructor full-test.sh passed again after reproducibility checks (exit 0).
+
+- [x] Source commit published with approval; its GitHub Actions workflow passed.
+- [x] Separate Assignment 4 runner online as a user service after local tests.
+- [x] Final package rebuilt from published e4f36a0 through Git SSH without patches.
+
+- [x] Final published-source QEMU checks and instructor full-test.sh passed (exit 0).
+- [ ] Publish final Buildroot commit with approval and verify its GitHub Actions job.

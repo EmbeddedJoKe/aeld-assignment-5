@@ -53,12 +53,14 @@ copies the result by SCP. Install `sshpass` on the host. An ignored
 The native instructor test helper directory is added to PATH by
 `full-test.sh`; the instructor CI container also supplies these helpers.
 
-The package fetches source through Git SSH. Its temporary patch mirrors the
-source working-tree changes while publication awaits approval. Once the
-updated source commit is pushed, update `AESD_ASSIGNMENTS_VERSION` to that
-commit and remove the patch before the final Buildroot submission.
+The package fetches the published Assignment 4 Part 2 source commit through
+Git SSH, including source submodules. It builds the source directly without
+local overrides or package patches.
 
 The separate GitHub runner uses `actions-runner-assignment4/`, name and
 label `aeld-assignment-4`. That directory and the host tools are ignored by
 Git. `register-runner.sh` refuses to overwrite an existing registration.
 The Assignment 3 runner is independent and must remain unchanged.
+After local testing, `./start-runner.sh` enables the separate user service
+`aeld-assignment4-runner.service`; it uses no sudo and starts on user login.
+Inspect it with `systemctl --user status aeld-assignment4-runner.service`.
