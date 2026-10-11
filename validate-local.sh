@@ -1,15 +1,21 @@
 #!/bin/bash
-# Validate the built image and copy the required result into the source repo.
+# Supplemental lifecycle checks around the unchanged instructor socket test.
 set -euo pipefail
 cd "$(dirname "$0")"
-source_repo=$(realpath "${1:?Usage: ./validate-local.sh /path/to/source-repository}")
 export PATH="$PWD/host-tools/bin:$PATH"
 command -v sshpass >/dev/null
 known_hosts=$(mktemp)
 qemu_pid=
 cleanup() {
-    if [ -n "$qemu_pid" ]; then
-        kill "$qemu_pid" 2>/dev/null || true
+    if [ -n "$qemu_pid" ] && kill -0 "$qemu_pid" 2>/dev/null; then
+        guest 'poweroff' >/dev/null 2>&1 || true
+        for attempt in $(seq 1 15); do
+            kill -0 "$qemu_pid" 2>/dev/null || break
+            sleep 1
+        done
+        if kill -0 "$qemu_pid" 2>/dev/null; then
+            kill "$qemu_pid" 2>/dev/null || true
+        fi
         wait "$qemu_pid" 2>/dev/null || true
     fi
     rm -f "$known_hosts"
@@ -18,43 +24,55 @@ trap cleanup EXIT
 ssh_options=(-o StrictHostKeyChecking=no -o UserKnownHostsFile="$known_hosts"
              -o ConnectTimeout=3 -o ConnectionAttempts=1)
 guest() {
-    sshpass -p root ssh "${ssh_options[@]}" -p 10022 root@localhost "$@"
+    sshpass -p root ssh "${ssh_options[@]}" -p 10022 root@127.0.0.1 "$@"
+}
+boot() {
+    ./runqemu.sh >> qemu-validation.log 2>&1 &
+    qemu_pid=$!
+    for attempt in $(seq 1 60); do
+        kill -0 "$qemu_pid"
+        if guest true >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 2
+    done
+    echo 'QEMU SSH startup timed out.' >&2
+    return 1
+}
+stop_service() {
+    guest '/etc/init.d/S99aesdsocket stop && test ! -e /var/tmp/aesdsocketdata && ! pidof aesdsocket'
 }
 
-file buildroot/output/target/usr/bin/writer | grep 'ARM aarch64'
-for executable in writer finder.sh finder-test.sh tester.sh; do
-    test -x "buildroot/output/target/usr/bin/$executable"
-done
-./runqemu.sh > qemu-validation.log 2>&1 &
-qemu_pid=$!
-ready=0
-for attempt in $(seq 1 60); do
-    kill -0 "$qemu_pid"
-    if guest true >/dev/null 2>&1; then
-        ready=1
-        break
-    fi
-    sleep 2
-done
-if [ "$ready" -ne 1 ]; then
-    echo "QEMU SSH did not become ready within the startup timeout." >&2
-    exit 1
+file buildroot/output/target/usr/bin/aesdsocket | grep 'ARM aarch64'
+test -x buildroot/output/target/etc/init.d/S99aesdsocket
+boot
+guest 'uname -m; pidof aesdsocket; ps | grep "[a]esdsocket -d"; test -x /usr/bin/aesdsocket'
+bash assignment-autotest/test/assignment5/sockettest.sh -t 127.0.0.1
+guest 'grep -F "Accepted connection from" /var/log/messages; grep -F "Closed connection from" /var/log/messages'
+stop_service
+guest 'grep -F "Caught signal, exiting" /var/log/messages'
+stop_service
+guest '/etc/init.d/S99aesdsocket start && /etc/init.d/S99aesdsocket start; test "$(pidof aesdsocket | wc -w)" -eq 1'
+bash assignment-autotest/test/assignment5/sockettest.sh -t 127.0.0.1
+guest 'kill -INT $(pidof aesdsocket); sleep 1; test ! -e /var/tmp/aesdsocketdata && ! pidof aesdsocket'
+guest '/etc/init.d/S99aesdsocket start'
+python3 - <<'PY'
+import socket
+with socket.create_connection(('127.0.0.1', 9000), timeout=5) as client:
+    client.sendall(b'before-graceful-halt\n')
+    assert client.recv(4096) == b'before-graceful-halt\n'
+PY
+# halt executes rcK, including S99aesdsocket stop. Resume the same disk image.
+guest 'halt' || true
+sleep 5
+grep -F 'Stopping aesdsocket: OK' qemu-validation.log
+if kill -0 "$qemu_pid" 2>/dev/null; then
+    kill "$qemu_pid"
 fi
-
-guest 'uname -m; command -v writer finder.sh finder-test.sh tester.sh; cat /etc/finder-app/conf/username.txt'
-guest 'cd /; finder-test.sh'
-guest 'cd /tmp; /usr/bin/finder-test.sh 20 AESD_IS_AWESOME alternate'
-guest 'cd /root; tester.sh'
-guest 'cd /etc; finder-test.sh'
-guest 'grep -F "The number of files are 10 and the number of matching lines are 10" /tmp/assignment4-result.txt'
-guest 'grep -F "writer: Writing AELD_IS_FUN" /var/log/messages'
-guest 'writer >/dev/null 2>&1; test "$?" -eq 1'
-guest 'writer /tmp/missing-parent/file test >/dev/null 2>&1; test "$?" -eq 1'
-mkdir -p "$source_repo/assignments/assignment4"
-# Dropbear supplies legacy SCP. -O also supports OpenSSH hosts using SFTP by default.
-sshpass -p root scp -O "${ssh_options[@]}" -P 10022 \
-    root@localhost:/tmp/assignment4-result.txt \
-    "$source_repo/assignments/assignment4/assignment4-result.txt"
-grep -F 'The number of files are 10 and the number of matching lines are 10' \
-    "$source_repo/assignments/assignment4/assignment4-result.txt"
-echo 'Local QEMU, SSH, finder, writer syslog, and SCP validation passed.'
+wait "$qemu_pid" 2>/dev/null || true
+qemu_pid=
+boot
+guest 'pidof aesdsocket; test ! -s /var/tmp/aesdsocketdata'
+bash assignment-autotest/test/assignment5/sockettest.sh -t 127.0.0.1
+stop_service
+echo 'PASS: SSH, automatic startup, socket tests, signals, service restart, halt, and clean reboot.'

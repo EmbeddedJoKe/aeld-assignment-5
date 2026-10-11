@@ -1,11 +1,11 @@
 #!/bin/bash
-# Start only the registered Assignment 4 runner as a persistent user service.
+# Start only the registered Assignment 5 runner as a persistent user service.
 set -euo pipefail
 cd "$(dirname "$0")"
-runner_dir="$PWD/actions-runner-assignment4"
+runner_dir="$PWD/actions-runner-assignment5"
 test -f "$runner_dir/.runner"
 unit_dir="$HOME/.config/systemd/user"
-unit_file="$unit_dir/aeld-assignment4-runner.service"
+unit_file="$unit_dir/aeld-assignment5-runner.service"
 mkdir -p "$unit_dir"
 if [ -f "$unit_file" ] && ! grep -Fq "ExecStart=$runner_dir/run.sh" "$unit_file"; then
     echo "Refusing to replace an unrelated user service: $unit_file" >&2
@@ -13,7 +13,7 @@ if [ -f "$unit_file" ] && ! grep -Fq "ExecStart=$runner_dir/run.sh" "$unit_file"
 fi
 cat > "$unit_file" <<EOF
 [Unit]
-Description=Assignment 4 GitHub Actions runner
+Description=Assignment 5 GitHub Actions runner
 After=network-online.target
 
 [Service]
@@ -26,5 +26,5 @@ RestartSec=5
 WantedBy=default.target
 EOF
 systemctl --user daemon-reload
-systemctl --user enable --now aeld-assignment4-runner.service
-systemctl --user is-active aeld-assignment4-runner.service
+systemctl --user enable --now aeld-assignment5-runner.service
+systemctl --user is-active aeld-assignment5-runner.service

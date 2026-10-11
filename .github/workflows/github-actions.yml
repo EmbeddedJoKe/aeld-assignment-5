@@ -1,4 +1,7 @@
 name: assignment-test
+concurrency:
+    group: assignment-test-${{ github.repository }}
+    cancel-in-progress: false
 on:
     push:
         tags-ignore:
